@@ -97,4 +97,42 @@ router.post("/get-user-info", authMiddleware, async (req, res) => {
   }
 });
 
+router.post("/update-password", authMiddleware, async (req, res) => {
+  try {
+    // Retrieve the current user
+    const user = await User.findById(req.body.userId);
+
+    // Check if the old password provided is correct
+    const validPassword = await bcrypt.compare(
+      req.body.oldPassword,
+      user.password
+    );
+
+    if (!validPassword) {
+      return res
+        .status(200)
+        .send({ message: "Invalid old password", success: false });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.newPassword, salt);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    res.send({
+      message: "Password updated successfully",
+      success: true,
+    });
+  } catch (error) {
+    res.status(500).send({
+      message: error.message,
+      data: error,
+      success: false,
+    });
+  }
+});
+
 module.exports = router;
